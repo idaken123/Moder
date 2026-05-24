@@ -140,6 +140,37 @@ python -m uvicorn main:app --host 127.0.0.1 --port 18088
 
 然后访问 `http://127.0.0.1:18088`。由于部分服务模块是 `cp311-win_amd64.pyd`，建议使用 Windows 64 位 Python 3.11。加密 skills、激活校验、Claude CLI、TeX 编译和图像生成等功能还需要相应 license、API Key 和外部工具链。
 
+仓库还提供了 Windows 启动脚本：
+
+```powershell
+# 从仓库根目录运行一次健康检查
+powershell -ExecutionPolicy Bypass -File .\scripts\check-run.ps1
+
+# 单独启动后端，默认端口 18088
+powershell -ExecutionPolicy Bypass -File .\scripts\start-backend.ps1
+
+# 启动 Electron 桌面端
+powershell -ExecutionPolicy Bypass -File .\scripts\start-desktop.ps1
+```
+
+脚本会按以下顺序寻找 Python 3.11：`MH_AGENT_PYTHON`、`MH_AGENT_RUNTIME_DIR`、仓库 `runtime/python/python.exe`、原打包目录 `D:\Modex-MH-Agent\runtime\python\python.exe`、Windows `py -3.11`、本机 Python 3.11。也可以手动设置：
+
+```powershell
+$env:MH_AGENT_RUNTIME_DIR="D:\Modex-MH-Agent\runtime"
+powershell -ExecutionPolicy Bypass -File .\scripts\start-backend.ps1
+```
+
+`app/package.json` 中也提供了 npm 入口：
+
+```powershell
+cd app
+npm run check
+npm run backend
+npm start
+```
+
+`start-desktop.ps1` 默认设置 `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/`，用于避免 Electron 二进制从默认源下载失败。已有本地 Electron 缓存时不会重复下载。
+
 ## 配置项
 
 前端设置页会写入后端 settings，常见键包括：

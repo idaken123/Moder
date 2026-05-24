@@ -18,13 +18,29 @@ const fs = require('fs');
 // ── 路径 ──
 const IS_DEV = !app.isPackaged;
 const APP_ROOT = IS_DEV ? __dirname : path.join(process.resourcesPath, 'app');
+
+function firstExistingPath(candidates, fallback) {
+  for (const candidate of candidates) {
+    if (candidate && fs.existsSync(candidate)) return candidate;
+  }
+  return fallback;
+}
+
 const RUNTIME_DIR = IS_DEV
-  ? path.join(__dirname, 'runtime')
+  ? firstExistingPath([
+      process.env.MH_AGENT_RUNTIME_DIR,
+      path.join(__dirname, 'runtime'),
+      path.join(__dirname, '..', 'runtime'),
+    ], path.join(__dirname, '..', 'runtime'))
   : path.join(path.dirname(process.resourcesPath), 'runtime');
 
 const PYTHON_EXE = path.join(RUNTIME_DIR, 'python', 'python.exe');
 const BACKEND_DIR = IS_DEV
-  ? path.join(__dirname, '..', 'web', 'backend')
+  ? firstExistingPath([
+      process.env.MH_AGENT_BACKEND_DIR,
+      path.join(__dirname, 'backend'),
+      path.join(__dirname, '..', 'web', 'backend'),
+    ], path.join(__dirname, 'backend'))
   : path.join(APP_ROOT, 'backend');
 
 const PORT = 18088;
@@ -193,25 +209,20 @@ function startBackend() {
     pythonPath = PYTHON_EXE;
     pythonArgs = ['-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', String(actualPort), '--log-level', 'info'];
   } else {
-    // 开发模式：按优先级查找可用 Python
+    // 开发模式：该发布包包含 cp311-win_amd64.pyd，优先使用 Python 3.11
     const candidates = [
-      'C:\\Windows\\py.exe',                    // Windows Launcher
-      path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python313', 'python.exe'),
-      path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python312', 'python.exe'),
-      path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python311', 'python.exe'),
-      path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python310', 'python.exe'),
-      path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python39', 'python.exe'),
+      { exe: process.env.MH_AGENT_PYTHON, prefix: [] },
+      { exe: 'C:\\Windows\\py.exe', prefix: ['-3.11'] },
+      { exe: path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python311', 'python.exe'), prefix: [] },
+      { exe: 'python', prefix: [] },
     ];
     let found = false;
     for (const candidate of candidates) {
-      if (candidate && fs.existsSync(candidate)) {
-        if (candidate.endsWith('py.exe')) {
-          pythonPath = candidate;
-          pythonArgs = ['-3', '-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', String(actualPort), '--log-level', 'info'];
-        } else {
-          pythonPath = candidate;
-          pythonArgs = ['-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', String(actualPort), '--log-level', 'info'];
-        }
+      const candidateExe = candidate.exe;
+      if (!candidateExe) continue;
+      if (candidateExe === 'python' || fs.existsSync(candidateExe)) {
+        pythonPath = candidateExe;
+        pythonArgs = [...candidate.prefix, '-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', String(actualPort), '--log-level', 'info'];
         found = true;
         break;
       }
@@ -222,6 +233,11 @@ function startBackend() {
     }
   }
 
+  if (!fs.existsSync(BACKEND_DIR)) {
+    dialog.showErrorBox('后端目录不存在', `未找到后端目录：${BACKEND_DIR}\n请确认仓库包含 app/backend，或设置 MH_AGENT_BACKEND_DIR。`);
+    return;
+  }
+
   const env = Object.assign({}, process.env, {
     MH_DESKTOP: '1',
     API_PORT: String(actualPort),
@@ -230,7 +246,6 @@ function startBackend() {
     LANG: 'en_US.UTF-8',
     LC_ALL: 'en_US.UTF-8',
     PYTHONIOENCODING: 'utf-8',
-    PYTHONUTF8: '1',
   });
 
   // 把 runtime 工具链加入 PATH

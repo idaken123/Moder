@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "description": "Modex-MH-Agent 桌面版 — AI 科研助手",
   "main": "main.js",
+  "scripts": {
+    "start": "powershell -ExecutionPolicy Bypass -File ..\\scripts\\start-desktop.ps1",
+    "backend": "powershell -ExecutionPolicy Bypass -File ..\\scripts\\start-backend.ps1",
+    "check": "powershell -ExecutionPolicy Bypass -File ..\\scripts\\check-run.ps1"
+  },
   "author": "明珩科技",
   "license": "MIT"
 }

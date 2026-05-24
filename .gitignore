@@ -1,5 +1,8 @@
 # Local runtime and packaged binaries are intentionally excluded from this repository.
-runtime/
+runtime/*
+!runtime/README.md
+app/runtime/*
+!app/runtime/README.md
 locales/
 *.exe
 *.dll
@@ -12,6 +15,8 @@ locales/
 *.sqlite
 *.log
 debug.log
+__pycache__/
+*.py[cod]
 .env
 .env.*
 
