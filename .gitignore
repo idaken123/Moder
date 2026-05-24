@@ -1,0 +1,22 @@
+# Local runtime and packaged binaries are intentionally excluded from this repository.
+runtime/
+locales/
+*.exe
+*.dll
+*.pak
+*.bin
+*.dat
+
+# Local state
+*.db
+*.sqlite
+*.log
+debug.log
+.env
+.env.*
+
+# OS/editor files
+Thumbs.db
+.DS_Store
+.idea/
+.vscode/
